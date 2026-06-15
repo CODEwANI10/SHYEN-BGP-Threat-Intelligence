@@ -1,8 +1,8 @@
 // BGP path anomaly detection — uses REAL path data, not simulated
 // Called with the actual AS path array from RIPE RIS messages
 
-const NORMAL_MAX_HOPS = 7
-const SUSPICIOUS_MAX  = 10
+const NORMAL_MAX_HOPS = 15  // raised to match ripeRIS.js NORMAL_PATH_MAX=20; Indian BGP routes routinely reach 15-18 hops
+const SUSPICIOUS_MAX  = 20  // matches ripeRIS.js NORMAL_PATH_MAX
 
 export function checkPathAnomaly(incident) {
   // Use the real path length from RIS data if available

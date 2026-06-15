@@ -1,7 +1,5 @@
 import { useSHYENStore } from '../../store/useSHYENStore.js'
 import { INDIAN_ASNS }   from '../../data/indianASNs.js'
-import { useRef }        from 'react'
-
 function StatCard({ label, value, color, sub, delta, deltaColor }) {
   return (
     <div style={{

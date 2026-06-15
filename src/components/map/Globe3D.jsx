@@ -270,6 +270,12 @@ export default function Globe3D({ onViewHistory, onCountryClick }) {
         del.style.opacity = dot > -0.1 ? '1' : '0'
       }
 
+      // Animate arc travel dots (moved from setInterval — single animation source)
+      if (dynamicRef.current) {
+        for (const child of dynamicRef.current.children) {
+          child.userData.animateFn?.()
+        }
+      }
       renderer.render(scene, camera)
     }
     animate()
@@ -296,8 +302,9 @@ export default function Globe3D({ onViewHistory, onCountryClick }) {
     const lc           = labelContainerRef.current
     if (!dynamicGroup || !lc) return
 
-    // Clear previous
+    // Clear previous — must also reset userData.labels or animate loop hits removed DOM nodes
     while (dynamicGroup.children.length) dynamicGroup.remove(dynamicGroup.children[0])
+    dynamicGroup.userData.labels = []  // BUG FIX: was never reset, caused TypeError on ghost elements
     if (lc) {
       const toRemove = lc.querySelectorAll('.dyn-label')
       toRemove.forEach(n => n.remove())
@@ -389,12 +396,10 @@ export default function Globe3D({ onViewHistory, onCountryClick }) {
 
     dynamicGroup.userData.labels = dynamicGroup.userData.labels ?? []
 
-    // Animate dots
-    const origAnimate = rafRef.current
-    const dotMeshes = dynamicGroup.children.filter(c => c.userData.animateFn)
-    const dotInterval = setInterval(() => dotMeshes.forEach(d => d.userData.animateFn?.()), 16)
-
-    return () => clearInterval(dotInterval)
+    // Dot animation is handled by the rAF loop in the scene setup effect
+    // (it iterates dynamicGroup.children and calls animateFn each frame)
+    // No setInterval needed — was causing double-speed animation + two timers per update
+    return () => {}
   }, [incidents])
 
   return (

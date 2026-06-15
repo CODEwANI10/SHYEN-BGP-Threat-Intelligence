@@ -66,9 +66,12 @@ export default function AttackHistoryPanel({ onClose }) {
   const [view, setView] = useState('overview') // 'overview' | 'origins' | 'log'
   const [severityFilter, setSeverityFilter] = useState('All')
 
+  // Overview stats count active incidents only (consistent with rest of dashboard)
+  const activeIncidents = incidents.filter(i => i.status !== 'MITIGATED')
+
   // Origins breakdown
   const originCounts = {}
-  for (const i of incidents) {
+  for (const i of activeIncidents) {
     const c = i.attacker?.country ?? '??'
     originCounts[c] = (originCounts[c] ?? 0) + 1
   }
@@ -77,7 +80,7 @@ export default function AttackHistoryPanel({ onClose }) {
 
   // Sector breakdown
   const sectorCounts = {}
-  for (const i of incidents) {
+  for (const i of activeIncidents) {
     const s = i.victim?.sector ?? 'Unknown'
     sectorCounts[s] = (sectorCounts[s] ?? 0) + 1
   }
@@ -86,7 +89,7 @@ export default function AttackHistoryPanel({ onClose }) {
 
   // Attack type breakdown
   const typeCounts = {}
-  for (const i of incidents) {
+  for (const i of activeIncidents) {
     const t = i.type?.replace(/_/g,' ') ?? 'Unknown'
     typeCounts[t] = (typeCounts[t] ?? 0) + 1
   }

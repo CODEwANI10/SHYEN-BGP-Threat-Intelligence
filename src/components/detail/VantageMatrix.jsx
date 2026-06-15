@@ -6,11 +6,9 @@ export default function VantageMatrix({ incident }) {
   const isReal       = incident.isRealData
   const confirmedSet = new Set(incident.confirmedPoints ?? [])
 
-  // For real data: treat RIPE-RIS Live as confirming the first 2 vantage points
-  // (Amsterdam and Oregon are RIPE RIS nodes — actually true)
-  const effectiveConfirmed = isReal && confirmedSet.has('RIPE-RIS Live')
-    ? new Set(['RIPE-RIS-01 Amsterdam', 'RouteViews Oregon'])
-    : confirmedSet
+  // confirmedPoints now contains real named vantage points from hostToVantage()
+  // e.g. 'RIPE-RIS-01 Amsterdam', 'RouteViews Oregon' — use directly
+  const effectiveConfirmed = confirmedSet
 
   const confirmedCount = effectiveConfirmed.size
 

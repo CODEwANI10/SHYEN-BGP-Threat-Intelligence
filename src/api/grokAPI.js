@@ -18,10 +18,9 @@ Attack Type: ${inc.type.replace(/_/g,' ')}
 Hijacked Prefix: ${inc.prefix}
 Attacker: ${inc.attacker.asn} (${inc.attacker.name}, ${inc.attacker.country})
 Affected IPs: ${inc.affectedIPs.toLocaleString()}
-Vantage Confirmations: ${inc.confirmedPoints.length}/10 global points
+Vantage Confirmations: ${(inc.confirmedPoints ?? []).length}/10 global points
 Confidence: ${inc.confidence}%
 Severity: ${inc.severity}
-Global Propagation: ${inc.propagationPct}%
 Attack ID: INC-${new Date().getFullYear()}-${String(inc.id).padStart(4,'0')}`
 }
 

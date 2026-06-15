@@ -27,7 +27,7 @@ export async function analyzeWithClaude(incident, apiKey, signal) {
     method:'POST', signal,
     headers:{ 'Content-Type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01' },
     body: JSON.stringify({
-      model:'claude-sonnet-4-20250514', max_tokens:700,
+      model:'claude-sonnet-4-6', max_tokens:700,
       system:SYSTEM_PROMPT,
       messages:[{ role:'user', content:buildPrompt(incident) }],
     }),

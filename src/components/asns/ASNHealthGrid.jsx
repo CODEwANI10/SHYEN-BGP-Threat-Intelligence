@@ -1,6 +1,6 @@
 import { useSHYENStore } from '../../store/useSHYENStore.js'
 import { INDIAN_ASNS }   from '../../data/indianASNs.js'
-import { useRef, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const SECTOR_COLORS = {
   Financial:  '#ff2d55',
@@ -30,8 +30,7 @@ const RPKI_COVERAGE = {
 
 // Mini sparkline using SVG
 function Sparkline({ color = '#00ff88', height = 24, width = 80 }) {
-  const points = useRef(Array.from({length:20}, () => 40 + Math.random()*20))
-  const [data] = useState(points.current)
+  const [data] = useState(() => Array.from({length:20}, () => 40 + Math.random()*20))
 
   const max = Math.max(...data)
   const min = Math.min(...data)
@@ -58,12 +57,13 @@ function ASNCard({ asn }) {
   const color        = SECTOR_COLORS[asn.sector] ?? '#888'
   const rpki         = RPKI_COVERAGE[asn.asn] ?? 70
 
-  // Threat score: higher = more dangerous
+  // Threat score: deterministic — no Math.random (was causing flicker on every render)
+  const asnHash = asn.asn.split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) & 0xff, 0)
   const score = Math.min(99, Math.max(1,
     (active * 15) +
     (asnIncidents.length * 3) +
     (asn.sector === 'Financial' || asn.sector === 'Defense' ? 20 : 0) +
-    Math.floor(Math.random() * 10)
+    (asnHash % 10)
   ))
 
   const scoreColor = score >= 80 ? '#ff2d55' : score >= 50 ? '#ff6b00' : score >= 30 ? '#ffd60a' : '#30d158'

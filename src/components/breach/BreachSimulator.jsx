@@ -14,8 +14,9 @@ const SECTOR_COLORS = { Financial: '#ff2d55', Government: '#ffd60a', Defense: '#
 
 function buildScript(breach, victim, attacker, prefix) {
   const ts = new Date().toISOString().replace('T', ' ').slice(0, 19)
-  const affectedIPs = Math.floor(Math.random() * 60000) + 1000
-  const confidence  = 87 + Math.floor(Math.random() * 12)
+  const prefixBits  = parseInt(prefix?.split('/')[1] ?? '24')
+  const affectedIPs = Math.pow(2, 32 - prefixBits)
+  const confidence  = breach.severity === 'CRITICAL' ? 95 : breach.severity === 'HIGH' ? 87 : 78
   const incidentId  = Math.floor(Math.random() * 9000) + 1000
   return [
     { t: '', c: '', d: 0 },
@@ -182,7 +183,7 @@ export default function BreachSimulator({ onClose, onIncidentGenerated }) {
     setTerminal({ breach: b, victim: v, attacker: a, prefix })
   }
 
-  if (terminal) return <TerminalOverlay {...terminal} onDismiss={() => { setTerminal(null); if (onIncidentGenerated && terminal) { const inc = { type: terminal.breach.id, severity: terminal.breach.severity, victim: terminal.victim, attacker: terminal.attacker, prefix: terminal.prefix, confirmedPoints: ["RIPE-RIS-01 Amsterdam","RouteViews Oregon","RIPE-RIS-04 Geneva","RouteViews Tokyo","RIPE-RIS-10 Singapore","RouteViews Sydney","RIPE-RIS-11 New York","RouteViews Sao Paulo"], timestamp: new Date(), affectedIPs: Math.floor(Math.random()*60000)+1000, confidence: 87+Math.floor(Math.random()*12), isSimulated: true, isRealData: false }; onIncidentGenerated(inc); } onClose(); }} />
+  if (terminal) return <TerminalOverlay {...terminal} onDismiss={() => { setTerminal(null); if (onIncidentGenerated && terminal) { const inc = { type: terminal.breach.id, severity: terminal.breach.severity, victim: terminal.victim, attacker: terminal.attacker, prefix: terminal.prefix, confirmedPoints: ["RIPE-RIS-01 Amsterdam","RouteViews Oregon","RIPE-RIS-04 Geneva","RouteViews Tokyo","RIPE-RIS-10 Singapore","RouteViews Sydney","RIPE-RIS-11 New York","RouteViews Sao Paulo"], timestamp: new Date(), affectedIPs: (() => { const b = parseInt(terminal.prefix?.split('/')[1] ?? '24'); return Math.pow(2, 32 - b) })(), confidence: terminal.breach.severity === 'CRITICAL' ? 95 : terminal.breach.severity === 'HIGH' ? 87 : 78, isSimulated: true, isRealData: false }; onIncidentGenerated(inc); } onClose(); }} />
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)' }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>

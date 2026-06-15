@@ -1,7 +1,6 @@
 /**
  * groqAPI.js — Incident text analysis
  * Uses llama-3.1-8b-instant (fast) via the shared text queue in autonomousAI.js
- * Model was llama3-8b-8192 (deprecated) — fixed to llama-3.1-8b-instant
  */
 import { callTextAI } from './autonomousAI.js'
 
@@ -10,20 +9,24 @@ Respond in exactly 3 labeled sections with no markdown formatting:
 THREAT ASSESSMENT: 2-3 sentences on what happened and why it is dangerous.
 ATTACK VECTOR: 2-3 sentences on the technical mechanism of this attack.
 RECOMMENDED ACTIONS: exactly 3 bullet points starting with action verbs.
-Total response under 180 words. Use technical language. No asterisks. No hashes.`
+Total response under 180 words. Use technical language. No asterisks. No hashes. Each analysis must be unique and specific to the exact data — never use generic filler.`
 
 function buildUserPrompt(incident) {
-  return `Analyze this BGP hijack incident:
+  const pathInfo = incident.pathAnomaly ? `\nPath Anomaly: ${incident.pathAnomaly.replace(/_/g,' ')}` : ''
+  const communityInfo = incident.communities?.length ? `\nBGP Communities: ${incident.communities.slice(0,3).join(', ')}` : ''
+  const prepend = incident.prependCount > 0 ? `\nAS Path Prepend Count: ${incident.prependCount}` : ''
+  return `Analyze this BGP hijack incident [Incident #${incident.id}]:
 Victim: ${incident.victim.name} (${incident.victim.asn}) | Sector: ${incident.victim.sector}
 Attack Type: ${incident.type}
 Hijacked Prefix: ${incident.prefix}
 Attacker: ${incident.attacker.asn} (${incident.attacker.name}) | Country: ${incident.attacker.country}
-Affected IPs: ${incident.affectedIPs}
-Vantage Confirmations: ${incident.confirmedPoints.length}/8
+Affected IPs: ~${incident.affectedIPs?.toLocaleString() ?? 'unknown'}
+Vantage Confirmations: ${incident.confirmedPoints?.length ?? 1}/8
 Confidence Score: ${incident.confidence}%
 Severity: ${incident.severity}
 RPKI Status: ${incident.rpkiStatus?.state ?? 'unknown'}
-Repeat Attacker: ${incident.isRepeatAttacker ? 'YES — seen ' + incident.repeatCount + ' times' : 'No'}`
+Repeat Attacker: ${incident.isRepeatAttacker ? 'YES — seen ' + incident.repeatCount + ' times' : 'No'}${pathInfo}${communityInfo}${prepend}
+Data Source: ${incident.isRealData ? 'LIVE RIPE RIS feed' : 'Breach Simulator (synthetic)'}`
 }
 
 export async function analyzeIncident(incident, signal) {
@@ -34,7 +37,7 @@ export async function analyzeIncident(incident, signal) {
   }
 
   try {
-    const racePromise = callTextAI(SYSTEM_PROMPT, buildUserPrompt(incident), 600, 0.3)
+    const racePromise = callTextAI(SYSTEM_PROMPT, buildUserPrompt(incident), 600, 0.5)
     const result = signal
       ? await new Promise((resolve, reject) => {
           if (signal.aborted) { reject(new DOMException('Aborted', 'AbortError')); return }

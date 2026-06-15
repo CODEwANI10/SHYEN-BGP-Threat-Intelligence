@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSHYENStore } from '../../store/useSHYENStore.js'
 import { callTextAI } from '../../api/autonomousAI.js'
 
 const SYSTEM_PROMPT = `You are SHYEN, an expert BGP security analyst for India's national internet infrastructure. Answer questions about BGP incidents concisely and technically. Keep answers under 100 words. No markdown formatting.`
@@ -25,11 +26,19 @@ async function queryAI(question, context) {
   }
 }
 
-export default function ConversationalQuery({ incidents, compact }) {
+export default function ConversationalQuery({ compact, incidentId }) {
+  const incidents = useSHYENStore(s => s.incidents)
   const [query,   setQuery]   = useState('')
   const [answer,  setAnswer]  = useState('')
   const [loading, setLoading] = useState(false)
   const [open,    setOpen]    = useState(false)
+
+  // Reset Q&A when selected incident changes
+  useEffect(() => {
+    setQuery('')
+    setAnswer('')
+    setLoading(false)
+  }, [incidentId])
 
   const SUGGESTIONS = [
     'Which sector is most targeted?',

@@ -33,16 +33,33 @@ export async function checkRPKI(asn, prefix) {
 }
 
 async function _fetchRPKI(asn, prefix, key) {
+  // Guard: skip RPKI for unknown/placeholder ASNs — they produce junk URLs
+  // e.g. asn='AS-IN-UNKNOWN' → URL becomes /validity/-IN-UNKNOWN/... → 404 spam
+  const asnStr = String(asn)
+  if (!asn || asnStr.includes('UNKNOWN') || asnStr.includes('AS-IN') || asnStr === 'AS-UNKNOWN-IN') {
+    return null
+  }
+
   // Plain ASN number (no "AS" prefix) + literal slash in prefix path
-  const asnNum = String(asn).replace(/^AS/i, '')
+  const asnNum = asnStr.replace(/^AS/i, '')
+  // Must be a pure numeric ASN — reject anything else
+  if (!/^\d+$/.test(asnNum)) {
+    console.warn(`[SHYEN RPKI] Skipping invalid ASN: ${asn}`)
+    return null
+  }
   const url    = `https://rpki.cloudflare.com/api/v1/validity/${asnNum}/${prefix}`
 
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) })
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(5000),
+      // mode:'cors' is default; if CORS blocks (e.g. some Cloudflare RPKI paths),
+      // the browser logs a network error regardless of JS catch. We silence this
+      // by checking the cache first (done above) and only fetching on cache miss.
+    })
 
     // 404 = no ROA entry for this prefix in Cloudflare's database.
     // This is DOCUMENTED behavior — treat as "not-found" / unknown.
-    // Do NOT retry; do NOT log as an error.
+    // Cache for 15 min (longer than valid results) to prevent repeat network requests.
     if (res.status === 404) {
       const result = {
         valid: false, invalid: false, unknown: true,
@@ -51,7 +68,7 @@ async function _fetchRPKI(asn, prefix, key) {
         asn, prefix,
       }
       CACHE.set(key, result)
-      setTimeout(() => CACHE.delete(key), 5 * 60 * 1000)
+      setTimeout(() => CACHE.delete(key), 15 * 60 * 1000)  // 15 min cache for 404s
       return result
     }
 

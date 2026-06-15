@@ -8,42 +8,14 @@ import AIAnalysis           from './AIAnalysis.jsx'
 import ActivityLog          from './ActivityLog.jsx'
 import ForensicsReport      from './ForensicsReport.jsx'
 import { generateCERTInReport } from '../../utils/pdfExport.js'
+import ResponseActions from './ResponseActions.jsx'
 
 const SEV_COLOR     = { CRITICAL:'var(--accent-red)', HIGH:'var(--accent-orange)', MEDIUM:'var(--accent-amber)', LOW:'#30d158' }
 const SECTOR_COLORS = { Financial:'#ff2d55', Government:'#ffd60a', Defense:'#ff6b00', Telecom:'#00bfff', ISP:'#00ff88', IXP:'#bf5af2' }
 
-// Response action button
-function ResponseBtn({ color, icon, label, desc, done, onClick }) {
-  const [h, setH] = useState(false)
-  return (
-    <button onClick={done ? undefined : onClick}
-      onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-      style={{
-        width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
-        padding:'10px 14px', borderRadius:4, cursor: done ? 'default' : 'pointer',
-        background: done ? `${color}12` : h ? `${color}18` : `${color}0a`,
-        border:`1px solid ${done ? color+'60' : color+'30'}`,
-        transition:'all 0.15s', marginBottom:6,
-      }}>
-      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-        <div style={{ width:28, height:28, borderRadius:'50%', background:`${color}22`, border:`1px solid ${color}44`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:13 }}>{icon}</div>
-        <div style={{ textAlign:'left' }}>
-          <div style={{ fontFamily:'var(--font-mono)', fontSize:10, fontWeight:700, color, letterSpacing:'0.08em' }}>{label}</div>
-          <div style={{ fontFamily:'var(--font-mono)', fontSize:8, color:'var(--text-muted)' }}>{desc}</div>
-        </div>
-      </div>
-      {done
-        ? <span style={{ color:'#30d158', fontSize:14 }}>✓</span>
-        : <span style={{ color, fontSize:12 }}>›</span>
-      }
-    </button>
-  )
-}
-
 export default function DetailPanel({ incident: inc }) {
-  const incidents  = useSHYENStore(s => s.incidents)
-  const triggerAction = useSHYENStore(s => s.triggerAction)
   const addActivityLog = useSHYENStore(s => s.addActivityLog)
+  const triggerAction  = useSHYENStore(s => s.triggerAction)
   const [showForensics, setShowForensics] = useState(false)
 
   async function handleForensics() {
@@ -52,7 +24,8 @@ export default function DetailPanel({ incident: inc }) {
     addActivityLog?.('SUCCESS', `Forensics evidence bundle compiled for ${inc.victim?.name}`, inc.id)
   }
   const color      = SEV_COLOR[inc.severity] ?? '#30d158'
-  const incId      = `INC-${new Date(inc.timestamp).getFullYear()}-${String(new Date(inc.timestamp).getMonth()+1).padStart(2,'0')}${String(new Date(inc.timestamp).getDate()).padStart(2,'0')}-${String(inc.id).padStart(4,'0')}`
+  const ts         = inc.timestamp ? new Date(inc.timestamp) : new Date()
+  const incId      = `INC-${ts.getFullYear()}-${String(ts.getMonth()+1).padStart(2,'0')}${String(ts.getDate()).padStart(2,'0')}-${String(inc.id).padStart(4,'0')}`
 
   return (
     <div style={{ animation:'fadeIn 0.25s ease-out' }}>
@@ -93,7 +66,7 @@ export default function DetailPanel({ incident: inc }) {
             ['Attacker ASN',     inc.attacker?.asn],
             ['Target ASN',       inc.victim?.asn],
             ['Affected Prefix',  inc.prefix],
-            ['First Seen',       new Date(inc.timestamp).toISOString().replace('T',' ').slice(0,19)+' UTC'],
+            ['First Seen',       inc.timestamp ? new Date(inc.timestamp).toISOString().replace('T',' ').slice(0,19)+' UTC' : '—'],
             ['Confidence',       `${inc.confidence}%`],
           ].map(([k,v]) => (
             <div key={k} style={{ display:'flex', gap:8, marginBottom:3 }}>
@@ -163,21 +136,18 @@ export default function DetailPanel({ incident: inc }) {
         </div>
 
         {/* Analyze Incident button */}
-        <ConversationalQuery incidents={incidents} compact />
+        <ConversationalQuery compact incidentId={inc.id} />
       </div>
 
-      {/* RESPONSE ACTIONS */}
+      {/* RESPONSE ACTIONS — uses ResponseActions component with Execute All + TTM */}
       <div style={{ marginBottom:10 }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
           <div style={{ fontFamily:'var(--font-mono)', fontSize:9, fontWeight:700, color:'var(--text-secondary)', letterSpacing:'0.1em' }}>RESPONSE ACTIONS</div>
           <div style={{ fontFamily:'var(--font-mono)', fontSize:8, color:'var(--text-muted)' }}>Incident ID: {incId}</div>
         </div>
-        <ResponseBtn color="#30d158" icon="🔒" label="PUSH RPKI" desc="RPKI Invalidation" done={inc.rpkiPushed} onClick={() => triggerAction(inc.id, 'rpki')} />
-        <ResponseBtn color="#ffd60a" icon="⚠️" label="ALERT IXPs" desc="Notify NIXI & peers" done={inc.ixpAlerted} onClick={() => triggerAction(inc.id, 'ixp')} />
-        <ResponseBtn color="#ff6b00" icon="📋" label="FORENSICS" desc={inc.forensicsReady ? "View evidence bundle" : "Compile evidence"} done={false} onClick={handleForensics} />
+        <ResponseActions incident={inc} />
         {inc.forensicsReady && (
-          <div style={{ fontFamily:'var(--font-mono)', fontSize:8, color:'#30d158', marginTop:-2, marginBottom:6, paddingLeft:38, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
-            <span>✓ Bundle ready</span>
+          <div style={{ fontFamily:'var(--font-mono)', fontSize:8, color:'#30d158', marginBottom:6, display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
             <button onClick={async () => { try { await generateCERTInReport(inc); addActivityLog?.('SUCCESS', `CERT-In PDF downloaded`, inc.id) } catch { addActivityLog?.('INFO', `PDF export failed`, inc.id) } }} style={{
               fontFamily:'var(--font-mono)', fontSize:8, color:'#00bfff',
               background:'none', border:'1px solid rgba(0,191,255,0.35)',
@@ -202,6 +172,23 @@ export default function DetailPanel({ incident: inc }) {
 
       {/* Activity Log */}
       <ActivityLog />
+
+      {/* VIEW FORENSICS — always-visible button at bottom */}
+      <div style={{ marginTop:12, paddingTop:10, borderTop:'1px solid var(--border-subtle)' }}>
+        <button
+          onClick={handleForensics}
+          style={{
+            width:'100%', fontFamily:'var(--font-mono)', fontSize:9, fontWeight:700,
+            letterSpacing:'0.1em', padding:'9px 0', borderRadius:4, cursor:'pointer',
+            background: inc.forensicsReady ? 'rgba(255,140,0,0.12)' : 'rgba(255,140,0,0.06)',
+            border:`1px solid ${inc.forensicsReady ? 'rgba(255,140,0,0.55)' : 'rgba(255,140,0,0.25)'}`,
+            color: inc.forensicsReady ? '#ff8c00' : 'rgba(255,140,0,0.55)',
+            transition:'all 0.2s',
+          }}
+        >
+          {inc.forensicsReady ? '📋 VIEW FORENSICS EVIDENCE BUNDLE' : '🔍 COMPILE & VIEW FORENSICS'}
+        </button>
+      </div>
     </div>
   )
 }

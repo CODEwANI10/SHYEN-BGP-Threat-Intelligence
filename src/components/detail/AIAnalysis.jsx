@@ -2,47 +2,97 @@ import { useState, useEffect, useRef } from 'react'
 import { analyzeIncident } from '../../api/groqAPI.js'
 
 export default function AIAnalysis({ incident, compact }) {
-  const [text,    setText]    = useState(null)
+  const cacheRef = useRef({})
+  const reqRef   = useRef(0)
+
+  const cached = incident ? cacheRef.current[incident.id] : null
+
+  const [text,    setText]    = useState(cached ?? null)
   const [loading, setLoading] = useState(false)
-  const lastIdRef = useRef(null)
+  const [source,  setSource]  = useState(cached ? 'ai' : null)
 
   useEffect(() => {
-    if (!incident || incident.id === lastIdRef.current) return
-    lastIdRef.current = incident.id
+    if (!incident) return
+
+    // Already AI-cached — show immediately
+    if (cacheRef.current[incident.id]) {
+      setText(cacheRef.current[incident.id])
+      setSource('ai')
+      setLoading(false)
+      return
+    }
+
+    // Read deterministicSummary inside the effect so it's always fresh for this incident
+    const deterministicText = incident.deterministicSummary ?? null
+
+    // Show deterministic summary immediately while AI loads
+    if (deterministicText) {
+      setText(deterministicText)
+      setSource('deterministic')
+    } else {
+      setText(null)
+      setSource(null)
+    }
+
+    const myToken = ++reqRef.current
+    setLoading(true)
 
     const controller = new AbortController()
-    let timedOut = false
+    let settled = false
 
     const timer = setTimeout(() => {
-      timedOut = true
-      controller.abort()
-      setText('AI analysis timed out. Manual review required.')
+      if (settled || reqRef.current !== myToken) return
+      settled = true
+      // Timeout — keep showing deterministic, don't blank out
       setLoading(false)
-    }, 30000)
-
-    setLoading(true)
-    setText(null)
+      setSource('deterministic')
+    }, 25000)
 
     analyzeIncident(incident, controller.signal)
       .then(result => {
-        if (!timedOut) { clearTimeout(timer); setText(result); setLoading(false) }
+        clearTimeout(timer)
+        if (settled || reqRef.current !== myToken) return
+        settled = true
+        if (result && result !== 'AI analysis service unavailable. Manual review required.') {
+          cacheRef.current[incident.id] = result
+          setText(result)
+          setSource('ai')
+        }
+        // else keep the deterministic summary showing
+        setLoading(false)
       })
       .catch(err => {
-        if (!timedOut && err.name !== 'AbortError') {
-          clearTimeout(timer); setText('AI analysis service unavailable. Manual review required.'); setLoading(false)
-        }
+        clearTimeout(timer)
+        if (settled || reqRef.current !== myToken) return
+        settled = true
+        if (err.name !== 'AbortError') setLoading(false)
+        // deterministic summary stays visible
       })
 
-    return () => { clearTimeout(timer); controller.abort() }
+    return () => {
+      clearTimeout(timer)
+      reqRef.current++
+    }
   }, [incident?.id])
+
+  const displayText = text ?? 'Compiling threat assessment...'
+
+  const sourceLabel = source === 'ai'
+    ? '▸ AI ANALYSIS · groq'
+    : source === 'deterministic'
+    ? '▸ AUTONOMOUS ASSESSMENT · SHYEN playbook'
+    : '▸ ANALYZING...'
+
+  const sourceColor = source === 'ai' ? 'var(--accent-blue)' : source === 'deterministic' ? 'var(--accent-green)' : 'var(--text-muted)'
 
   if (compact) {
     return (
       <div style={{
         padding:'8px 10px', background:'rgba(0,191,255,0.04)',
         border:'1px solid rgba(0,191,255,0.15)', borderRadius:3,
+        minHeight: 36,
       }}>
-        {loading ? (
+        {loading && source === null ? (
           <div style={{ display:'flex', gap:5, alignItems:'center', padding:'4px 0' }}>
             {[0,0.16,0.32,0.48,0.64].map((d,i) => (
               <div key={i} style={{ width:5, height:5, background:'var(--accent-blue)', borderRadius:'50%', animation:`dotBounce 1.4s ease-in-out ${d}s infinite` }} />
@@ -50,30 +100,29 @@ export default function AIAnalysis({ incident, compact }) {
             <span style={{ fontFamily:'var(--font-mono)', fontSize:8, color:'var(--text-muted)', marginLeft:6 }}>Analyzing incident...</span>
           </div>
         ) : (
-          <pre style={{ fontFamily:'var(--font-mono)', fontSize:9, color:'#99d6ff', lineHeight:1.7, whiteSpace:'pre-wrap', margin:0, wordBreak:'break-word' }}>
-            {text || 'Awaiting analysis...'}
-          </pre>
+          <>
+            <div style={{ fontFamily:'var(--font-mono)', fontSize:7, color: sourceColor, letterSpacing:'0.1em', marginBottom:4, display:'flex', alignItems:'center', gap:6 }}>
+              {sourceLabel}
+              {loading && <span style={{ opacity:0.5 }}>· upgrading to AI...</span>}
+            </div>
+            <pre style={{ fontFamily:'var(--font-mono)', fontSize:9, color:'#99d6ff', lineHeight:1.7, whiteSpace:'pre-wrap', margin:0, wordBreak:'break-word' }}>
+              {displayText}
+            </pre>
+          </>
         )}
       </div>
     )
   }
 
   return (
-    <div style={{ marginBottom:16, background:'rgba(0,191,255,0.04)', border:'1px solid rgba(0,191,255,0.15)', borderRadius:4, padding:16 }}>
-      <div style={{ fontFamily:'var(--font-mono)', fontSize:8, color:'var(--accent-blue)', letterSpacing:2, marginBottom:10 }}>
-        ▸ SHYEN AUTONOMOUS ANALYSIS · groq (primary) / huggingface (fallback)
+    <div style={{ marginBottom:16, background:'rgba(0,191,255,0.04)', border:'1px solid rgba(0,191,255,0.15)', borderRadius:4, padding:16, minHeight:60 }}>
+      <div style={{ fontFamily:'var(--font-mono)', fontSize:8, color: sourceColor, letterSpacing:2, marginBottom:10, display:'flex', alignItems:'center', gap:8 }}>
+        {sourceLabel}
+        {loading && <span style={{ opacity:0.5 }}>· fetching AI upgrade...</span>}
       </div>
-      {loading ? (
-        <div style={{ display:'flex', gap:6, alignItems:'center', padding:'8px 0' }}>
-          {[0,0.16,0.32,0.48,0.64].map((d,i) => (
-            <div key={i} style={{ width:6, height:6, background:'var(--accent-blue)', borderRadius:'50%', animation:`dotBounce 1.4s ease-in-out ${d}s infinite` }} />
-          ))}
-        </div>
-      ) : (
-        <pre style={{ fontFamily:'var(--font-mono)', fontSize:9, color:'#99d6ff', lineHeight:1.8, whiteSpace:'pre-wrap', margin:0, wordBreak:'break-word' }}>
-          {text}
-        </pre>
-      )}
+      <pre style={{ fontFamily:'var(--font-mono)', fontSize:9, color:'#99d6ff', lineHeight:1.8, whiteSpace:'pre-wrap', margin:0, wordBreak:'break-word' }}>
+        {displayText}
+      </pre>
     </div>
   )
 }

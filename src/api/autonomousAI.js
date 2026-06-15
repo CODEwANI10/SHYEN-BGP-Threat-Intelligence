@@ -23,12 +23,13 @@ const HF_KEY     = import.meta.env.VITE_HF_API_KEY
 // ── Models ────────────────────────────────────────────────────────────────
 const GROQ_DECISION_MODEL = 'llama-3.3-70b-versatile'   // best accuracy for JSON
 const GROQ_TEXT_MODEL     = 'llama-3.1-8b-instant'      // fast, high RPM
-// HuggingFace primary: meta-llama/Llama-3.1-8B-Instruct (gated but widely accessible)
-// HuggingFace fallback: mistralai/Mistral-7B-Instruct-v0.3
+// HuggingFace models — ordered by reliability (free inference tier, no auth gate)
+// zephyr-7b-beta removed: requires paid HF Pro / often returns 401
+// Llama-3.1-8B-Instruct removed: gated model, requires HF token with model access approved
 const HF_MODELS = [
-  'meta-llama/Llama-3.1-8B-Instruct',
   'mistralai/Mistral-7B-Instruct-v0.3',
-  'HuggingFaceH4/zephyr-7b-beta',
+  'microsoft/Phi-3-mini-4k-instruct',
+  'tiiuae/falcon-7b-instruct',
 ]
 
 const DECISION_PROMPT = `You are SHYEN, an autonomous BGP security AI for India's national internet infrastructure.
@@ -65,7 +66,7 @@ function extractJSON(text) {
 }
 
 // ── Queue factory ─────────────────────────────────────────────────────────
-const GROQ_MIN_INTERVAL = 12000
+const GROQ_MIN_INTERVAL = 4000
 
 function _makeGroqQueue(label) {
   let lastCall     = 0
@@ -200,6 +201,11 @@ async function _tryHFModel(model, systemPrompt, userContent, maxTokens, temperat
       }),
       signal: AbortSignal.timeout(20000),
     })
+    // 401 = bad/missing HF key — no point trying other models, key itself is invalid
+    if (res.status === 401) {
+      console.warn(`[SHYEN AI] HuggingFace 401 — check VITE_HF_API_KEY`)
+      return 'AUTH_FAILED'
+    }
     if (!res.ok) {
       console.warn(`[SHYEN AI] HuggingFace ${res.status} for ${model}`)
       return null
@@ -216,6 +222,7 @@ async function _fetchHF(systemPrompt, userContent, maxTokens, temperature = 0.1)
   if (!HF_KEY) { console.warn('[SHYEN AI] No HF_API_KEY set'); return null }
   for (const model of HF_MODELS) {
     const result = await _tryHFModel(model, systemPrompt, userContent, maxTokens, temperature)
+    if (result === 'AUTH_FAILED') return null  // key is bad — stop trying
     if (result !== null) return result
   }
   console.warn('[SHYEN AI] All HuggingFace models failed')

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useSHYENStore } from '../../store/useSHYENStore.js'
 import PulseRing     from '../shared/PulseRing.jsx'
 import SeverityBadge from '../shared/SeverityBadge.jsx'
@@ -11,8 +11,8 @@ const SEV_COLOR = {
   LOW:      '#30d158',
 }
 
-function elapsedStr(ts) {
-  const s = Math.floor((Date.now() - new Date(ts)) / 1000)
+function elapsedStr(ts, now) {
+  const s = Math.floor((now - new Date(ts)) / 1000)
   if (s < 60)   return `${s}s ago`
   if (s < 3600) return `${Math.floor(s / 60)}m ago`
   return `${Math.floor(s / 3600)}h ago`
@@ -36,15 +36,10 @@ function RPKILock({ rpkiStatus }) {
 }
 
 export default function IncidentCard({ incident: inc, selected, onClick, onAction }) {
-  const [, forceUpdate] = useState(0)
+  // Use shared systemTime from store — avoids 200 individual setIntervals
+  const systemTime = useSHYENStore(s => s.systemTime)
   const color  = SEV_COLOR[inc.severity] ?? '#30d158'
   const active = inc.status === 'DETECTED'
-
-  // Live elapsed time
-  useEffect(() => {
-    const t = setInterval(() => forceUpdate(n => n + 1), 1000)
-    return () => clearInterval(t)
-  }, [])
 
   const flagMap = {
     IN:'🇮🇳', CN:'🇨🇳', PK:'🇵🇰', EG:'🇪🇬', DE:'🇩🇪', IT:'🇮🇹', US:'🇺🇸', AU:'🇦🇺', JP:'🇯🇵',
@@ -84,7 +79,7 @@ export default function IncidentCard({ incident: inc, selected, onClick, onActio
         <RPKILock rpkiStatus={inc.rpkiStatus} />
 
         <span style={{ fontFamily:'var(--font-mono)', fontSize:8, color:'var(--text-muted)', marginLeft:'auto' }}>
-          {elapsedStr(inc.timestamp)}
+          {elapsedStr(inc.timestamp, systemTime)}
         </span>
       </div>
 

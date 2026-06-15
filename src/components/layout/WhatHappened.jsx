@@ -22,7 +22,8 @@ const ATTACK_PLAIN = {
 }
 
 export default function WhatHappened() {
-  const incidents = useSHYENStore(s => s.incidents)
+  const incidents  = useSHYENStore(s => s.incidents)
+  const systemTime = useSHYENStore(s => s.systemTime)
   const latest    = incidents[0]
 
   if (!latest) {
@@ -36,7 +37,7 @@ export default function WhatHappened() {
     )
   }
 
-  const secAgo = Math.floor((Date.now() - new Date(latest.timestamp)) / 1000)
+  const secAgo = Math.floor((new Date(systemTime) - new Date(latest.timestamp)) / 1000)
   const timeStr = secAgo < 60 ? `${secAgo} seconds ago` : `${Math.floor(secAgo / 60)} minutes ago`
   const action  = ATTACK_PLAIN[latest.type] || 'attacked'
   const impact  = SECTOR_IMPACT[latest.victim.sector] || 'critical infrastructure may be affected'

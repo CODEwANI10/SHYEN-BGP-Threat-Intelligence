@@ -14,9 +14,8 @@ export function exportIncidentsJSON(incidents) {
       attacker:        { asn:inc.attacker.asn, name:inc.attacker.name, country:inc.attacker.country },
       prefix:          inc.prefix,
       confidence:      inc.confidence,
-      propagationPct:  inc.propagationPct,
       affectedIPs:     inc.affectedIPs,
-      vantagePoints:   inc.confirmedPoints.length,
+      vantagePoints:   (inc.confirmedPoints ?? []).length,
       actions: {
         rpkiPushed:     inc.rpkiPushed,
         ixpAlerted:     inc.ixpAlerted,

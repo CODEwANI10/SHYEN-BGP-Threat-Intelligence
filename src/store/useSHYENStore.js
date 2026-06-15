@@ -16,11 +16,11 @@ function appendLog(activityLog, entry) {
   return [...activityLog, entry].slice(-80)
 }
 
-// FIX: Raised incident cap from 30 → 200, with smart pruning:
+// Raised incident cap to 500 to handle 150/min throughput:
 // - MITIGATED incidents are pruned first (oldest first)
 // - Active/DETECTED incidents are preserved
-// - Hard cap at 200 to prevent memory bloat
-const MAX_INCIDENTS = 200
+// - Hard cap at 500 to prevent memory bloat
+const MAX_INCIDENTS = 500
 function pruneIncidents(incidents) {
   if (incidents.length <= MAX_INCIDENTS) return incidents
   // Sort: keep DETECTED/ACTIVE first, prune oldest MITIGATED
@@ -51,15 +51,17 @@ export const useSHYENStore = create((set) => ({
 
   notifications: [],
 
+  chatMessages: [],
+  grokApiKey: import.meta.env.VITE_GROK_API_KEY ?? '',
+
   addIncident: (incident) => set(state => {
-    // FIX: Smart pruning instead of hard slice(0, 30)
     const raw = [incident, ...state.incidents]
     const incidents = pruneIncidents(raw)
     const activityLog = appendLog(
       state.activityLog,
       logEntry(
         incident.aiDecided ? 'SUCCESS' : 'INFO',
-        `${incident.aiDecided ? 'AI DECIDED' : 'Incident detected'}: ${incident.severity} ${incident.type.replace(/_/g,' ')} on ${incident.victim.name}`,
+        `${incident.aiDecided ? 'AI DECIDED' : 'Incident detected'}: ${incident.severity} ${(incident.type ?? 'UNKNOWN').replace(/_/g,' ')} on ${incident.victim?.name ?? 'Unknown'}`,
         incident.id,
       ),
     )
@@ -70,10 +72,6 @@ export const useSHYENStore = create((set) => ({
 
   addTickerEntry: (entry) => set(state => ({
     ticker:             [...state.ticker, entry].slice(-20),
-    totalAnnouncements: state.totalAnnouncements + 1,
-  })),
-
-  incrementAnnouncements: () => set(state => ({
     totalAnnouncements: state.totalAnnouncements + 1,
   })),
 
@@ -90,12 +88,11 @@ export const useSHYENStore = create((set) => ({
       if (action === 'ixp')       u.ixpAlerted     = true
       if (action === 'forensics') u.forensicsReady = true
       if (action === 'flag')      u.flagged        = true
-      // FIX: Instant MITIGATED — any complete response (RPKI+IXP) triggers immediately
       if (u.rpkiPushed && u.ixpAlerted) {
-        u.status = 'MITIGATED'
-        u.mitigatedAt = new Date().toISOString()
-        // Calculate time-to-mitigate in ms from detection
-        u.mitigationMs = u.timestamp ? Date.now() - new Date(u.timestamp).getTime() : null
+        u.status          = 'MITIGATED'
+        u.mitigatedAt     = new Date().toISOString()
+        u.mitigationMs    = u.timestamp ? Date.now() - new Date(u.timestamp).getTime() : null
+        u.mitigationSource = u.mitigationSource ?? 'MANUAL'
       }
       actedIncident = u
       return u
@@ -104,10 +101,10 @@ export const useSHYENStore = create((set) => ({
     const actionLabel = ACTION_LABELS[action] ?? action.toUpperCase()
     let activityLog = appendLog(
       state.activityLog,
-      logEntry('ACTION', `${actionLabel} executed${actedIncident ? ` for ${actedIncident.victim.name}` : ''}`, incidentId),
+      logEntry('ACTION', `${actionLabel} executed${actedIncident ? ` for ${actedIncident.victim?.name ?? 'Unknown'}` : ''}`, incidentId),
     )
     if (actedIncident?.status === 'MITIGATED') {
-      activityLog = appendLog(activityLog, logEntry('SUCCESS', `Mitigation complete for ${actedIncident.victim.name}`, incidentId))
+      activityLog = appendLog(activityLog, logEntry('SUCCESS', `Mitigation complete for ${actedIncident.victim?.name ?? 'Unknown'}`, incidentId))
     }
 
     return { incidents, activityLog }
@@ -195,6 +192,12 @@ export const useSHYENStore = create((set) => ({
     }),
   })),
 
+  addChatMessage: (msg) => set(state => ({
+    chatMessages: [...state.chatMessages, msg].slice(-100),
+  })),
+
+  clearChat: () => set({ chatMessages: [] }),
+
   dismissNotification: (id) => set(state => ({
     notifications: state.notifications.filter(n => n.id !== id),
   })),
@@ -206,7 +209,10 @@ export const useSHYENStore = create((set) => ({
 
   incrementRisStats: () => set(state => ({
     risMessageCount: state.risMessageCount + 1,
-    risIndianCount:  state.risIndianCount  + 1,
+  })),
+
+  incrementRisIndianCount: () => set(state => ({
+    risIndianCount: state.risIndianCount + 1,
   })),
 
   setAPNICLoaded: (count) => set({ apnicLoaded: true, apnicCount: count }),

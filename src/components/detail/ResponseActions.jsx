@@ -42,11 +42,11 @@ export default function ResponseActions({ incident }) {
   // "Execute All" — fires RPKI + IXP + Forensics simultaneously → instant MITIGATED
   async function executeAll() {
     setExecuting('all')
-    // Fire all three actions with a tiny visual stagger
+    // Fire all three actions with minimal visual stagger (20ms)
     triggerAction(incident.id, 'rpki')
-    await new Promise(r => setTimeout(r, 80))
+    await new Promise(r => setTimeout(r, 20))
     triggerAction(incident.id, 'ixp')
-    await new Promise(r => setTimeout(r, 80))
+    await new Promise(r => setTimeout(r, 20))
     triggerAction(incident.id, 'forensics')
     setExecuting(null)
   }
@@ -54,8 +54,8 @@ export default function ResponseActions({ incident }) {
   async function executeSingle(key) {
     setExecuting(key)
     triggerAction(incident.id, key)
-    // Small delay for visual feedback
-    await new Promise(r => setTimeout(r, 300))
+    // Minimal delay for visual feedback
+    await new Promise(r => setTimeout(r, 80))
     setExecuting(null)
   }
 
@@ -64,8 +64,16 @@ export default function ResponseActions({ incident }) {
   const mitMs     = incident.mitigationMs
   const mitTime   = formatMitigationTime(mitMs)
 
-  // If already mitigated by AI, show the summary banner
-  if (isMit && incident.aiDecided) {
+  // Show mitigation complete banner for ANY mitigation source
+  if (isMit) {
+    const sourceLabel = incident.mitigationSource === 'AI_AUTONOMOUS'
+      ? '✓ AI AUTONOMOUS MITIGATION COMPLETE'
+      : incident.mitigationSource === 'AI_ALERT_MODE'
+      ? '✓ AI ALERT-MODE MITIGATION COMPLETE'
+      : incident.mitigationSource === 'MANUAL'
+      ? '✓ MANUAL MITIGATION COMPLETE'
+      : '✓ AUTONOMOUS PLAYBOOK MITIGATION COMPLETE'
+
     return (
       <div style={{ marginBottom: 16 }}>
         <div style={{
@@ -77,7 +85,7 @@ export default function ResponseActions({ incident }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'var(--accent-green)', letterSpacing: 1 }}>
-              ✓ AI AUTONOMOUS MITIGATION COMPLETE
+              {sourceLabel}
             </span>
             {mitTime && (
               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--text-muted)' }}>
@@ -89,9 +97,8 @@ export default function ResponseActions({ incident }) {
             {(incident.autonomousActionsExecuted ?? []).join(' · ')}
           </div>
         </div>
-        {/* Still show individual action rows as confirmed */}
         {ACTIONS.map(action => (
-          <ActionRow key={action.key} action={action} incident={incident} done={true} onExecute={null} executing={null} />
+          <ActionRow key={action.key} action={action} incident={incident} done={!!incident[action.field]} onExecute={null} executing={null} />
         ))}
       </div>
     )

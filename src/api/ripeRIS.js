@@ -18,7 +18,7 @@ const INDIAN_ASN_NUMBERS = new Set(
 )
 
 const NORMAL_PATH_MIN = 2
-const NORMAL_PATH_MAX = 12
+const NORMAL_PATH_MAX = 20  // raised from 12 — real Indian BGP paths routinely reach 15-18 hops
 
 // ── Real confidence scoring ───────────────────────────────────────────────
 // Replaces Math.random() — derived from real BGP signals
@@ -131,9 +131,15 @@ function parseRISMessage(raw) {
 
           const isExpectedOrigin = matchedASN.asn === originAS ||
             matchedASN.asn === 'AS-UNKNOWN-IN' || matchedASN.asn === 'AS-IN'
-          const isSuspicious = !isExpectedOrigin || pathAnomaly !== null ||
-            communityInfo.hasBlackholeComm || communityInfo.hasSuspiciousCommunity ||
-            pathAnalysis.prependCount > 2 || pathAnalysis.hasLoop
+          // Tightened: prepend threshold raised (>4 repeats, not >2) to cut noise.
+          // Path length anomalies alone no longer flag as suspicious — real Indian
+          // routes often traverse 15-20 hops through multi-homed ISPs.
+          const isSuspicious = !isExpectedOrigin ||
+            communityInfo.hasBlackholeComm ||
+            communityInfo.hasSuspiciousCommunity ||
+            pathAnalysis.prependCount > 4 ||
+            pathAnalysis.hasLoop ||
+            (pathAnomaly === 'PATH_TOO_SHORT' && !isExpectedOrigin)  // short path + wrong origin = real signal
 
           const entryData = {
             eventType:             'ANNOUNCEMENT',
