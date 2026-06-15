@@ -1,0 +1,61 @@
+{
+  "hash": "7ae45789",
+  "configHash": "354f10c7",
+  "lockfileHash": "3fd6f460",
+  "browserHash": "e2358f13",
+  "optimized": {
+    "react": {
+      "src": "../../react/index.js",
+      "file": "react.js",
+      "fileHash": "197cb4cd",
+      "needsInterop": true
+    },
+    "react-dom": {
+      "src": "../../react-dom/index.js",
+      "file": "react-dom.js",
+      "fileHash": "2ad9299e",
+      "needsInterop": true
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "1844e12d",
+      "needsInterop": true
+    },
+    "react/jsx-runtime": {
+      "src": "../../react/jsx-runtime.js",
+      "file": "react_jsx-runtime.js",
+      "fileHash": "f96c7567",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "7daaf885",
+      "needsInterop": true
+    },
+    "three": {
+      "src": "../../three/build/three.module.js",
+      "file": "three.js",
+      "fileHash": "ee487b62",
+      "needsInterop": false
+    },
+    "zustand": {
+      "src": "../../zustand/esm/index.mjs",
+      "file": "zustand.js",
+      "fileHash": "c67f0a3b",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-TYILIMWK": {
+      "file": "chunk-TYILIMWK.js"
+    },
+    "chunk-CANBAPAS": {
+      "file": "chunk-CANBAPAS.js"
+    },
+    "chunk-5WRI5ZAA": {
+      "file": "chunk-5WRI5ZAA.js"
+    }
+  }
+}

@@ -1,59 +1,51 @@
-# SHYEN — Autonomous BGP Hijack Detection & Response System
+<p align="center">
+  <a href="https://github.com/lucide-icons/lucide#gh-light-mode-only">
+    <img src="https://lucide.dev/lucide-react.svg#gh-light-mode-only" alt="Lucide React - Implementation of the lucide icon library for react applications." width="540">
+  </a>
+  <a href="https://github.com/lucide-icons/lucide#gh-dark-mode-only">
+    <img src="https://lucide.dev/package-logos/dark/lucide-react.svg#gh-dark-mode-only" alt="Lucide React - Implementation of the lucide icon library for react applications." width="540">
+  </a>
+</p>
 
-**PRD v2.0 — FAR AWAY 2026 Hackathon · Agentic & Autonomous Systems Track**
 
-## Quick Start
+# Lucide React
 
-```bash
-# 1. Install dependencies
-npm install
+Implementation of the lucide icon library for react applications.
 
-# 2. Set your Anthropic API key
-cp .env.example .env.local
-# Edit .env.local and add: VITE_ANTHROPIC_API_KEY=sk-ant-...
+> What is lucide? Read it [here](https://github.com/lucide-icons/lucide#what-is-lucide).
 
-# 3. Run the dev server
-npm run dev
+## Installation
+
+```sh
+yarn add lucide-react
 ```
 
-Open http://localhost:5173
+or
 
-## Build for Production
-
-```bash
-npm run build
-npm run preview
+```sh
+npm install lucide-react
 ```
 
-Or deploy the `dist/` folder to Vercel / Netlify.
+## Documentation
 
-## Stack
+For full documentation, visit [lucide.dev](https://lucide.dev/guide/packages/lucide-react)
 
-| Layer     | Tech                              |
-|-----------|-----------------------------------|
-| Frontend  | React 18 + Vite 5                 |
-| State     | Zustand 4                         |
-| AI Layer  | Anthropic Claude (claude-sonnet)  |
-| Styling   | Inline styles + CSS variables     |
-| Icons     | Lucide React (minimal use)        |
+## Community
 
-## Features
+Join the [Discord server](https://discord.gg/EH6nSts) to chat with the maintainers and other users.
 
-- Real-time BGP ticker (800ms updates, 15% suspicious rate)
-- Auto-generated incidents every ~4 seconds
-- 15 real Indian ASNs with actual IP prefix ranges
-- Severity matrix (CRITICAL / HIGH / MEDIUM / LOW)
-- Multi-vantage confirmation (4–8 of 8 global points)
-- Claude AI threat analysis per incident (real API call)
-- RPKI / IXP / Forensics response actions
-- ASN Health Grid with sector colour-coding
-- Live system clock (UTC)
+## License
 
-## Environment Variables
+Lucide is licensed under the ISC license. See [LICENSE](https://lucide.dev/license).
 
-| Variable                  | Description                     |
-|---------------------------|---------------------------------|
-| `VITE_ANTHROPIC_API_KEY`  | Your Anthropic API key (sk-ant-...) |
+## Sponsors
 
-> All BGP data is **simulated**. No live feed connections are made.
-> The Claude API call is real and will consume tokens.
+<a href="https://vercel.com?utm_source=lucide&utm_campaign=oss">
+  <img src="https://lucide.dev/vercel.svg" alt="Powered by Vercel" width="200" />
+</a>
+
+<a href="https://www.digitalocean.com/?refcode=b0877a2caebd&utm_campaign=Referral_Invite&utm_medium=Referral_Program&utm_source=badge"><img src="https://lucide.dev/digitalocean.svg" width="200" alt="DigitalOcean Referral Badge" /></a>
+
+### Awesome backer 🍺
+
+<a href="https://www.scipress.io?utm_source=lucide"><img src="https://lucide.dev/sponsors/scipress.svg" width="180" alt="Scipress sponsor badge" /></a>
